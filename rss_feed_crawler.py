@@ -35,7 +35,7 @@ def get_and_filter_feed(rss_url, latest_feed_timestamp):
     filtered_feed = list()
 
     result = feedparser.parse(rss_url)
-    print(len(result.entries))
+    print 'number of entries:', len(result.entries)
     for entry in result.entries:
         published_timestamp = datetime.fromtimestamp(
             time.mktime(entry.published_parsed))
@@ -66,7 +66,7 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             response = urllib2.urlopen(cdr_data['url'])
             cdr_data['raw_content'] = response.read()
             cdr_data['team'] = 'usc-isi-i2'
-            cdr_data['crawler'] = 'dig-rss-crawler'
+            cdr_data['crawler'] = 'dig-rss-feed-crawler'
             cdr_data['content_type'] = 'text/html'
             published_timestamp = datetime.fromtimestamp(
                 time.mktime(entry.published_parsed)).replace(microsecond=000001)
@@ -83,7 +83,7 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             if max_timestamp is None or max_timestamp < published_timestamp:
                 max_timestamp = published_timestamp
 
-            print entry.title.encode('utf-8')
+            print 'title:', entry.title.encode('utf-8')
 
             # Wait for some time before next call
             time.sleep(WAIT_TIME)
