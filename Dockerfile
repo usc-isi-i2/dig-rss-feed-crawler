@@ -11,6 +11,6 @@ WORKDIR /app
 ADD . /app
 RUN pip install -r /app/requirements.txt
 
-EXPOSE 8080
+#EXPOSE 8080
 
 CMD ["python", "rss_feed_crawler.py"]
