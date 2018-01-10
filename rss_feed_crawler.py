@@ -7,7 +7,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 import codecs
 import urllib2
 from dateutil import parser
-import uuid
+import hashlib
 
 from kafka import KafkaProducer
 from config import *
@@ -71,7 +71,7 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             published_timestamp = datetime.fromtimestamp(
                 time.mktime(entry.published_parsed)).replace(microsecond=000001)
             cdr_data['timestamp'] = published_timestamp.isoformat()
-            cdr_data['doc_id'] = str(uuid.uuid1())
+            cdr_data['doc_id'] = hashlib.sha256(cdr_data['url']).hexdigest().upper()
             cdr_data['project_name'] = PROJECT_NAME
 
             # Add CDR object to kafka queue
