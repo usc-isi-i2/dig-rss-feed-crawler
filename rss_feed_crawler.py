@@ -106,25 +106,32 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
     return max_timestamp
 
 
+def update_feed_state(latest_feed_state):
+    with open(LATEST_FEED_STATE_FILE, 'w') as f:
+        f.write(json.dumps(latest_feed_state, indent=4))
+
+
 def start_crawler():
 
     print 'Starting crawler'
     kafka_producer = init_kafka()
 
     # Load the state from the file
-    latest_feed_state = dict()
+    old_feed_state = dict()
     try:
         with open(LATEST_FEED_STATE_FILE, 'r') as f:
-            latest_feed_state = json.loads(f.read())
+            old_feed_state = json.loads(f.read())
     except:
         pass
 
-    # Load all feeds
+    # Load all feeds to new latest_feed_state
+    latest_feed_state = dict()
     with open(FEED_LIST, 'r') as f:
         for line in f:
             line = line.strip()
             if len(line) > 0:
-                latest_feed_state[line] = 0
+                latest_feed_state[line] = old_feed_state.get(line, 0)
+    update_feed_state(latest_feed_state)
 
     # For every key in latest_feed_state, crawl the data
     for rss_url in list(latest_feed_state):
@@ -139,8 +146,7 @@ def start_crawler():
             crawl_and_dump_feed(rss_url, latest_state, kafka_producer))
 
         # Update the state in the file (after every feed)
-        with open(LATEST_FEED_STATE_FILE, 'w') as f:
-            f.write(json.dumps(latest_feed_state, indent=4))
+        update_feed_state(latest_feed_state)
 
 
 def schedule_crawler(schedule_interval=SCHEDULE_INTERVAL):
