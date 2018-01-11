@@ -65,8 +65,6 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             else:
                 cdr_data['url'] = entry.link
 
-            cdr_data['doc_id'] = entry.title
-
             # Crawl the data from the URL
             response = urllib2.urlopen(cdr_data['url'])
             cdr_data['raw_content'] = response.read()
@@ -89,8 +87,6 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
                 max_timestamp = published_timestamp
 
             print '#{}: {}'.format(i, entry.title)
-            # print 'title:', entry.title.encode('utf-8')
-            # print type(cdr_data['raw_content'])
 
             # Wait for some time before next call
             time.sleep(WAIT_TIME)
@@ -142,8 +138,9 @@ def start_crawler():
         else:
             latest_state = parser.parse(latest_state)
 
-        latest_feed_state[rss_url] = str(
-            crawl_and_dump_feed(rss_url, latest_state, kafka_producer))
+        timestamp = crawl_and_dump_feed(rss_url, latest_state, kafka_producer)
+        # print timestamp
+        latest_feed_state[rss_url] = str(timestamp)
 
         # Update the state in the file (after every feed)
         update_feed_state(latest_feed_state)
