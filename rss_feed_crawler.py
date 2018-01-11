@@ -8,6 +8,8 @@ import codecs
 import urllib2
 from dateutil import parser
 import hashlib
+import sys
+import traceback
 
 from kafka import KafkaProducer
 from config import *
@@ -52,9 +54,12 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
     max_timestamp = latest_feed_timestamp
 
     # For every feed entry, create/open file and dump data
+    i = 0
     for entry in filtered_feed:
         try:
             cdr_data = dict()
+            i += 1
+
             if 'feedburner_origlink' in entry:
                 cdr_data['url'] = entry.feedburner_origlink
             else:
@@ -83,14 +88,20 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             if max_timestamp is None or max_timestamp < published_timestamp:
                 max_timestamp = published_timestamp
 
-            print 'title:', entry.title.encode('utf-8')
+            print '#{}: {}'.format(i, entry.title)
+            # print 'title:', entry.title.encode('utf-8')
+            # print type(cdr_data['raw_content'])
 
             # Wait for some time before next call
             time.sleep(WAIT_TIME)
 
         except Exception as e:
             print "ERROR - ", entry.title
-            print e
+
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            lines = ''.join(lines)
+            print lines
 
     return max_timestamp
 
@@ -101,9 +112,19 @@ def start_crawler():
     kafka_producer = init_kafka()
 
     # Load the state from the file
-    infile = open(LATEST_FEED_STATE_FILE, 'r')
-    latest_feed_state = json.load(infile)
-    infile.close()
+    latest_feed_state = dict()
+    try:
+        with open(LATEST_FEED_STATE_FILE, 'r') as f:
+            latest_feed_state = json.loads(f.read())
+    except:
+        pass
+
+    # Load all feeds
+    with open(FEED_LIST, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if len(line) > 0:
+                latest_feed_state[line] = 0
 
     # For every key in latest_feed_state, crawl the data
     for rss_url in list(latest_feed_state):
@@ -117,10 +138,9 @@ def start_crawler():
         latest_feed_state[rss_url] = str(
             crawl_and_dump_feed(rss_url, latest_state, kafka_producer))
 
-    # Update the state in the file
-    outfile = open(LATEST_FEED_STATE_FILE, 'w')
-    outfile.write(json.dumps(latest_feed_state, indent=4))
-    outfile.close()
+        # Update the state in the file (after every feed)
+        with open(LATEST_FEED_STATE_FILE, 'w') as f:
+            f.write(json.dumps(latest_feed_state, indent=4))
 
 
 def schedule_crawler(schedule_interval=SCHEDULE_INTERVAL):
@@ -135,6 +155,12 @@ def schedule_crawler(schedule_interval=SCHEDULE_INTERVAL):
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         print '\nStopping...\n'
+    except:
+        print 'Error in schedule_crawler()'
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        lines = ''.join(lines)
+        print lines
 
 
 if __name__ == '__main__':
