@@ -64,9 +64,15 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
                 cdr_data['url'] = entry.feedburner_origlink
             else:
                 cdr_data['url'] = entry.link
+            title = unicode(entry.title).encode('utf-8')
 
             # Crawl the data from the URL
-            response = urllib2.urlopen(cdr_data['url'])
+            try:
+                response = urllib2.urlopen(cdr_data['url'])
+            except urllib2.HTTPError as e:
+                print "[ERROR] #{} {} {} {}".format(i, e.code, title, cdr_data['url'])
+                continue
+
             cdr_data['raw_content'] = response.read()
             cdr_data['team'] = 'usc-isi-i2'
             cdr_data['crawler'] = 'dig-rss-feed-crawler'
@@ -86,13 +92,13 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             if max_timestamp is None or max_timestamp < published_timestamp:
                 max_timestamp = published_timestamp
 
-            print '#{}: {}'.format(i, entry.title)
+            print '#{}: {}'.format(i, title)
 
             # Wait for some time before next call
             time.sleep(WAIT_TIME)
 
         except Exception as e:
-            print "ERROR - ", entry.title
+            print "[ERROR] #{} {}".format(i, title)
 
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
