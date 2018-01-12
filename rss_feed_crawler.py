@@ -139,8 +139,8 @@ def start_crawler():
             latest_state = parser.parse(latest_state)
 
         timestamp = crawl_and_dump_feed(rss_url, latest_state, kafka_producer)
-        # print timestamp
-        latest_feed_state[rss_url] = str(timestamp)
+        # print 'timestamp',timestamp
+        latest_feed_state[rss_url] = str(timestamp) if timestamp else 0
 
         # Update the state in the file (after every feed)
         update_feed_state(latest_feed_state)
