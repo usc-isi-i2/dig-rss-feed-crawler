@@ -39,9 +39,14 @@ def get_and_filter_feed(rss_url, latest_feed_timestamp):
     result = feedparser.parse(rss_url)
     print 'number of entries:', len(result.entries)
     for entry in result.entries:
-        published_timestamp = datetime.fromtimestamp(
-            time.mktime(entry.published_parsed))
-        if latest_feed_timestamp is None or published_timestamp > latest_feed_timestamp:
+        published_timestamp = None
+        try:
+            published_timestamp = datetime.fromtimestamp(
+                time.mktime(entry.published_parsed))
+        except Exception as e:
+            pass
+        if latest_feed_timestamp is None or published_timestamp is None or \
+                        published_timestamp > latest_feed_timestamp:
             filtered_feed.append(entry)
 
     return filtered_feed
@@ -77,9 +82,13 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             cdr_data['team'] = 'usc-isi-i2'
             cdr_data['crawler'] = 'dig-rss-feed-crawler'
             cdr_data['content_type'] = 'text/html'
-            published_timestamp = datetime.fromtimestamp(
-                time.mktime(entry.published_parsed)).replace(microsecond=000001)
-            cdr_data['timestamp'] = published_timestamp.isoformat()
+            published_timestamp = None
+            try:
+                published_timestamp = datetime.fromtimestamp(
+                    time.mktime(entry.published_parsed)).replace(microsecond=000001)
+                cdr_data['timestamp'] = published_timestamp.isoformat()
+            except:
+                cdr_data['timestamp'] = datetime.now().isoformat()
             cdr_data['doc_id'] = hashlib.sha256(cdr_data['url']).hexdigest().upper()
             cdr_data['project_name'] = PROJECT_NAME
 
