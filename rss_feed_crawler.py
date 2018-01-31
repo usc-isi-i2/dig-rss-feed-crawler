@@ -86,9 +86,9 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             try:
                 published_timestamp = datetime.fromtimestamp(
                     time.mktime(entry.published_parsed)).replace(microsecond=000001)
-                cdr_data['timestamp'] = published_timestamp.isoformat()
             except:
-                cdr_data['timestamp'] = datetime.now().isoformat()
+                published_timestamp = datetime.now().isoformat()
+            cdr_data['timestamp'] = datetime.now().isoformat()
             cdr_data['doc_id'] = hashlib.sha256(cdr_data['url']).hexdigest().upper()
             cdr_data['project_name'] = PROJECT_NAME
 
