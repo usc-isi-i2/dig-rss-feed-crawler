@@ -37,7 +37,9 @@ def get_and_filter_feed(rss_url, latest_feed_timestamp):
     filtered_feed = list()
 
     result = feedparser.parse(rss_url)
+    print 'encoding:', result.encoding
     print 'number of entries:', len(result.entries)
+    print '---'
     for entry in result.entries:
         published_timestamp = None
         try:
@@ -57,6 +59,8 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
     filtered_feed = get_and_filter_feed(rss_url, latest_feed_timestamp)
 
     max_timestamp = latest_feed_timestamp
+
+    json_encoder = json.JSONEncoder()
 
     # For every feed entry, create/open file and dump data
     i = 0
@@ -91,6 +95,17 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             cdr_data['timestamp'] = datetime.now().isoformat()
             cdr_data['doc_id'] = hashlib.sha256(cdr_data['url']).hexdigest().upper()
             cdr_data['project_name'] = PROJECT_NAME
+
+            # for dig usage
+            cdr_data['rss'] = entry
+            for k, v in entry.items():
+                try:
+                    json_encoder.encode(v)
+                except:
+                    del cdr_data['rss'][k]
+
+            # print cdr_data
+            # print json.dumps(cdr_data).encode('utf-8')
 
             # Add CDR object to kafka queue
             # outfile = codecs.open('output.jl', 'a', 'utf-8')
@@ -146,7 +161,7 @@ def start_crawler():
 
     # For every key in latest_feed_state, crawl the data
     for rss_url in list(latest_feed_state):
-        print '---\n', rss_url, '\n---'
+        print '\n===\n', rss_url
         latest_state = latest_feed_state[rss_url]
         if latest_state == 0:
             latest_state = None
