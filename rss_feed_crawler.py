@@ -18,11 +18,15 @@ from config import *
 
 
 def init_kafka():
-    return KafkaProducer(
-        bootstrap_servers=BOOTSTRAP_SERVERS,
-        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-        **OUTPUT_ARGS
-    )
+    try:
+        return KafkaProducer(
+            bootstrap_servers=BOOTSTRAP_SERVERS,
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            **OUTPUT_ARGS
+        )
+    except:
+        time.sleep(10)
+        return init_kafka()
 
 
 def add_to_kafka_queue(cdr_data, kafka_producer=None):
