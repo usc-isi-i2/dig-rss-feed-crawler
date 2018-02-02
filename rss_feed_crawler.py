@@ -10,6 +10,8 @@ from dateutil import parser
 import hashlib
 import sys
 import traceback
+import socket
+import errno
 
 from kafka import KafkaProducer
 from config import *
@@ -37,7 +39,7 @@ def get_and_filter_feed(rss_url, latest_feed_timestamp):
     filtered_feed = list()
 
     result = feedparser.parse(rss_url)
-    print 'encoding:', result.encoding
+    print 'encoding:', result.encoding if 'encoding' in result else 'none'
     print 'number of entries:', len(result.entries)
     print '---'
     for entry in result.entries:
@@ -79,8 +81,15 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
             try:
                 response = urllib2.urlopen(cdr_data['url'])
             except urllib2.HTTPError as e:
-                print "[ERROR] #{} {} {} {}".format(i, e.code, title, cdr_data['url'])
+                print "[ERROR] #{} {} {} ({})".format(i, title, cdr_data['url'], e.code)
                 continue
+            except urllib2.URLError as e:
+                print "[ERROR] #{} {} {} ({})".format(i, title, cdr_data['url'], e.reason)
+                continue
+            except socket.error as e:
+                if e.errno != errno.ECONNRESET: # reset by peer
+                    print "[ERROR] #{} {} {} (reset by peer)".format(i, title, cdr_data['url'])
+                    continue
 
             cdr_data['raw_content'] = response.read()
             cdr_data['team'] = 'usc-isi-i2'
