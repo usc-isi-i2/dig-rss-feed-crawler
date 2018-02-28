@@ -14,6 +14,7 @@ import socket
 import errno
 
 from kafka import KafkaProducer
+from tldextract import tldextract
 from config import *
 
 
@@ -116,6 +117,8 @@ def crawl_and_dump_feed(rss_url, latest_feed_timestamp, kafka_producer=None):
                     json_encoder.encode(v)
                 except:
                     del cdr_data['rss'][k]
+            tld_obj = tldextract.extract(cdr_data['url'])
+            cdr_data['rss']['tld'] = tld_obj.domain + '.' + tld_obj.suffix
 
             # print cdr_data
             # print json.dumps(cdr_data).encode('utf-8')
